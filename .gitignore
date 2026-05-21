@@ -1,0 +1,14 @@
+# Środowisko wirtualne Pythona
+venv/
+env/
+
+# Skompilowane pliki Pythona (cache)
+__pycache__/
+*.pyc
+
+# Bazy danych
+*.sqlite3
+db.sqlite3
+
+# Ukryte pliki konfiguracyjne z kluczami/hasłami
+.env
