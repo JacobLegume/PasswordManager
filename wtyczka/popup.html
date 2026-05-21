@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Menedżer Haseł IoT</title>
+    <style>
+        body { width: 300px; padding: 15px; font-family: sans-serif; text-align: center;}
+        input { width: 90%; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;}
+        button { width: 95%; padding: 10px; margin-bottom: 5px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold;}
+        #loginBtn { background-color: #007bff; color: white; }
+        #registerBtn { background-color: #28a745; color: white; }
+        #status { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h3>Zarządzanie Hasłami</h3>
+    <input type="email" id="email" placeholder="Adres Email">
+    <input type="password" id="password" placeholder="Hasło Główne">
+    
+    <button id="loginBtn">Zaloguj się</button>
+    <button id="registerBtn">Zarejestruj Nowe Konto</button>
+    
+    <p id="status"></p>
+
+    <script src="crypto.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
