@@ -16,10 +16,13 @@ RATE_LIMIT = 5
 RATE_WINDOW = timedelta(minutes=5)
 
 
-def _check_rate_limit(ip):
+def _check_rate_limit(ip, email):
     cutoff = timezone.now() - RATE_WINDOW
     LoginAttempt.objects.filter(timestamp__lt=cutoff).delete()
-    return LoginAttempt.objects.filter(ip=ip, timestamp__gte=cutoff).count() >= RATE_LIMIT
+    # Blokuj jeśli za dużo prób z tego IP LUB na ten email (ochrona przed botnetem)
+    by_ip = LoginAttempt.objects.filter(ip=ip, timestamp__gte=cutoff).count()
+    by_email = LoginAttempt.objects.filter(email=email, timestamp__gte=cutoff).count()
+    return by_ip >= RATE_LIMIT or by_email >= RATE_LIMIT
 
 
 def _fake_salt_for(email: str) -> str:
@@ -71,7 +74,7 @@ class CustomLoginView(views.APIView):
             return Response({"error": "Brakuje emaila lub auth_key_hash."}, status=status.HTTP_400_BAD_REQUEST)
 
         ip = request.META.get('REMOTE_ADDR')
-        if _check_rate_limit(ip):
+        if _check_rate_limit(ip, email):
             return Response(
                 {"error": "Zbyt wiele prób logowania. Spróbuj ponownie za 5 minut."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS
@@ -80,12 +83,12 @@ class CustomLoginView(views.APIView):
         try:
             user = CustomUser.objects.get(email=email)
         except CustomUser.DoesNotExist:
-            LoginAttempt.objects.create(ip=ip)
+            LoginAttempt.objects.create(ip=ip, email=email)
             return Response({"error": "Błędne dane logowania."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # SPRAWDZENIE KRYPTOGRAFICZNE (Kluczowy moment Zero-Knowledge)
         if user.auth_key_hash != auth_key_hash:
-            LoginAttempt.objects.create(ip=ip)
+            LoginAttempt.objects.create(ip=ip, email=email)
             return Response({"error": "Błędne dane logowania."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # Jeśli hash się zgadza, generujemy tokeny JWT
