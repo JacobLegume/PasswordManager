@@ -1,9 +1,22 @@
+import hmac
+import hashlib
+import base64
+from django.conf import settings
 from rest_framework import status, views, generics
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUser, PasswordItem
 from .serializers import RegisterSerializer, PasswordItemSerializer
+
+
+def _fake_salt_for(email: str) -> str:
+    # Deterministic fake salt derived from server secret + email.
+    # Same email always produces the same value, so an attacker cannot
+    # distinguish "user exists" from "user doesn't exist" by comparing
+    # two responses for the same address.
+    mac = hmac.new(settings.SECRET_KEY.encode(), email.lower().encode(), hashlib.sha256)
+    return base64.b64encode(mac.digest()).decode()
 
 
 class RegisterView(views.APIView):
@@ -23,13 +36,15 @@ class GetSaltView(views.APIView):
     permission_classes = [AllowAny] 
 
     def post(self, request):
-        email = request.data.get('email')
+        email = request.data.get('email', '')
         try:
             user = CustomUser.objects.get(email=email)
-            # Wtyczka potrzebuje soli do wyliczenia kluczy
-            return Response({"salt": user.salt}, status=status.HTTP_200_OK)
+            salt = user.salt
         except CustomUser.DoesNotExist:
-            return Response({"error": "Użytkownik nie istnieje."}, status=status.HTTP_404_NOT_FOUND)
+            # Return a fake but deterministic salt so the response is
+            # indistinguishable from a real one — prevents user enumeration.
+            salt = _fake_salt_for(email)
+        return Response({"salt": salt}, status=status.HTTP_200_OK)
 
 
 class CustomLoginView(views.APIView):
